@@ -12,6 +12,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "types": ["react", "react-dom"],
+    "typeRoots": ["./node_modules/@types"],
     "incremental": true,
     "plugins": [
       {
