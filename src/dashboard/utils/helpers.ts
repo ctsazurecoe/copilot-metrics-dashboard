@@ -30,6 +30,8 @@ export const applyTimeFrameLabel = (
           breakdowns.push({
             editor: editor.name.toLowerCase(),
             model: model.name,
+            is_custom_model: model.is_custom_model,
+            custom_model_training_date: model.custom_model_training_date ?? null,
             language: language.name,
             suggestions_count: language.total_code_suggestions,
             acceptances_count: language.total_code_acceptances,

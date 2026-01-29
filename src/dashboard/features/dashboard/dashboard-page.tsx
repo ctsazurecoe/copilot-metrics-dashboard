@@ -4,6 +4,7 @@ import { ChatAcceptanceRate } from "./charts/chat-acceptance-rate";
 import { ActiveUsers } from "./charts/active-users";
 import { Editor } from "./charts/editor";
 import { Language } from "./charts/language";
+import { Model } from "./charts/model";
 import { Stats } from "./charts/stats";
 import { TotalChatsAndAcceptances } from "./charts/total-chat-suggestions-and-acceptances";
 import { TotalCodeLineSuggestionsAndAcceptances } from "./charts/total-code-line-suggestions-and-acceptances";
@@ -75,6 +76,7 @@ export default async function Dashboard(props: IProps) {
             <TotalChatsAndAcceptances />
             <Language />
             <Editor />
+            <Model />
           </div>
         </div>
       </main>

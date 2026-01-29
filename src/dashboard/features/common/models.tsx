@@ -96,6 +96,8 @@ export interface CopilotUsage {
     language: string;
     editor: string;
     model: string;
+    is_custom_model?: boolean;
+    custom_model_training_date?: string | null;
     suggestions_count: number;
     acceptances_count: number;
     lines_suggested: number;

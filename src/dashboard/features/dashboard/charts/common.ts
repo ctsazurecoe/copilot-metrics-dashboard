@@ -153,6 +153,142 @@ export const computeLanguageData = (
   return languages;
 };
 
+export const computeModelData = (
+  filteredData: CopilotUsageOutput[]
+): Array<PieChartData> => {
+  const modelMap = new Map<string, PieChartData>();
+
+  filteredData.forEach(({ breakdown }) => {
+    breakdown.forEach(({ model, active_users }) => {
+      if (!model) return;
+      const modelData = modelMap.get(model) || {
+        id: model,
+        name: model,
+        value: 0,
+        fill: "",
+      };
+      modelData.value += active_users;
+      modelMap.set(model, modelData);
+    });
+  });
+
+  let totalSum = 0;
+  const models = Array.from(modelMap.values()).map((model) => {
+    totalSum += model.value;
+    return model;
+  });
+
+  models.forEach((model) => {
+    model.value = totalSum > 0 ? Number(((model.value / totalSum) * 100).toFixed(2)) : 0;
+  });
+
+  models.sort((a, b) => b.value - a.value);
+
+  models.forEach((model, index) => {
+    model.fill = `hsl(var(--chart-${index < 4 ? index + 1 : 5}))`;
+  });
+
+  return models;
+};
+
+export interface ModelUsageSummary {
+  model: string;
+  activeUsers: number;
+  suggestions: number;
+  acceptances: number;
+  linesSuggested: number;
+  linesAccepted: number;
+  acceptanceRate: number;
+  acceptanceLinesRate: number;
+}
+
+export const getModelMetricsSummary = (
+  filteredData: CopilotUsageOutput[]
+): ModelUsageSummary[] => {
+  const modelMap = new Map<string, Omit<ModelUsageSummary, "acceptanceRate" | "acceptanceLinesRate">>();
+
+  filteredData.forEach(({ breakdown }) => {
+    breakdown.forEach((item) => {
+      const model = item.model;
+      if (!model) return;
+      const summary = modelMap.get(model) || {
+        model,
+        activeUsers: 0,
+        suggestions: 0,
+        acceptances: 0,
+        linesSuggested: 0,
+        linesAccepted: 0,
+      };
+      summary.activeUsers += item.active_users;
+      summary.suggestions += item.suggestions_count;
+      summary.acceptances += item.acceptances_count;
+      summary.linesSuggested += item.lines_suggested;
+      summary.linesAccepted += item.lines_accepted;
+      modelMap.set(model, summary);
+    });
+  });
+
+  return Array.from(modelMap.values()).map((summary) => {
+    const acceptanceRate = summary.suggestions
+      ? (summary.acceptances / summary.suggestions) * 100
+      : 0;
+    const acceptanceLinesRate = summary.linesSuggested
+      ? (summary.linesAccepted / summary.linesSuggested) * 100
+      : 0;
+
+    return {
+      ...summary,
+      acceptanceRate: parseFloat(acceptanceRate.toFixed(2)),
+      acceptanceLinesRate: parseFloat(acceptanceLinesRate.toFixed(2)),
+    };
+  });
+};
+
+export const getMostCommonModel = (
+  filteredData: CopilotUsageOutput[]
+): { model: string; activeUsers: number } | null => {
+  const summaries = getModelMetricsSummary(filteredData);
+  if (summaries.length === 0) return null;
+  const top = summaries.reduce((prev, curr) =>
+    curr.activeUsers > prev.activeUsers ? curr : prev
+  );
+
+  return { model: top.model, activeUsers: top.activeUsers };
+};
+
+export const getCustomModelCount = (
+  filteredData: CopilotUsageOutput[]
+): number => {
+  const customModels = new Set<string>();
+
+  filteredData.forEach(({ breakdown }) => {
+    breakdown.forEach((item) => {
+      if (item.model && item.is_custom_model) {
+        customModels.add(item.model);
+      }
+    });
+  });
+
+  return customModels.size;
+};
+
+export interface ModelAcceptanceRateData {
+  model: string;
+  acceptanceRate: number;
+  acceptanceLinesRate: number;
+}
+
+export const computeModelAcceptanceRate = (
+  filteredData: CopilotUsageOutput[]
+): ModelAcceptanceRateData[] => {
+  const summaries = getModelMetricsSummary(filteredData);
+  return summaries.map((summary) => ({
+    model: summary.model,
+    acceptanceRate: summary.acceptanceRate,
+    acceptanceLinesRate: summary.acceptanceLinesRate,
+  }));
+};
+
 export const computeActiveUserAverage = (
   filteredData: CopilotUsageOutput[]
 ) => {

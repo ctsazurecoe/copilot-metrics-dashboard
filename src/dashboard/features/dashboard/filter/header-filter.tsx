@@ -6,7 +6,7 @@ import { dashboardStore, useDashboard } from "../dashboard-state";
 import { DropdownFilter } from "./dropdown-filter";
 
 export function Filters() {
-  const { editors: allEditors, languages: allLanguages, teams: allTeams, isLoading } = useDashboard();
+  const { editors: allEditors, languages: allLanguages, models: allModels, teams: allTeams, isLoading } = useDashboard();
 
   return (
     <div className="flex gap-2 flex-1">
@@ -20,6 +20,11 @@ export function Filters() {
         allItems={allEditors}
         onSelect={(e) => dashboardStore.filterEditor(e)}
       />{" "}
+      <DropdownFilter
+        name={"Model"}
+        allItems={allModels}
+        onSelect={(e) => dashboardStore.filterModel(e)}
+      />
       <DropdownFilter
         name={"Team"}
         allItems={allTeams}

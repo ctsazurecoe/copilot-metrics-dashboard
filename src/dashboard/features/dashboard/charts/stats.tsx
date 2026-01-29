@@ -6,6 +6,8 @@ import {
   computeActiveUserAverage,
   computeAdoptionRate,
   computeCumulativeAcceptanceAverage,
+  getCustomModelCount,
+  getMostCommonModel,
 } from "./common";
 import StatsCard from "./stats-card";
 
@@ -14,6 +16,8 @@ export const Stats = () => {
   const acceptanceAverage = computeCumulativeAcceptanceAverage(filteredData);
   const averageActiveUsers = computeActiveUserAverage(filteredData);
   const adoptionRate = computeAdoptionRate(filteredSeatsData);
+  const mostCommonModel = getMostCommonModel(filteredData);
+  const customModelCount = getCustomModelCount(filteredData);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 col-span-4">
@@ -34,6 +38,24 @@ export const Stats = () => {
         tip="The adoption rate is the percentage of active seats compared to the total seats."
         description="Adoption rate by active seats"
         value={isLoading ? "..." : adoptionRate.toFixed(0) + "%"}
+      ></StatsCard>
+      <StatsCard
+        title="Most common model"
+        tip="The model with the highest number of engaged users based on code completion activity."
+        description="Top model by active users"
+        value={
+          isLoading
+            ? "..."
+            : mostCommonModel?.model
+              ? mostCommonModel.model
+              : "N/A"
+        }
+      ></StatsCard>
+      <StatsCard
+        title="Custom models in use"
+        tip="Number of distinct custom models with engagement activity in the selected period."
+        description="Custom models"
+        value={isLoading ? "..." : customModelCount.toString()}
       ></StatsCard>
       <Overview />
     </div>

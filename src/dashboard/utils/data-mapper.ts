@@ -44,7 +44,8 @@ export const groupByTimeFrame = (
         const existingIndex = aggregatedData.breakdown.findIndex(
           (bd) =>
             bd.language === breakdownItem.language &&
-            bd.editor === breakdownItem.editor
+            bd.editor === breakdownItem.editor &&
+            bd.model === breakdownItem.model
         );
 
         if (existingIndex >= 0) {

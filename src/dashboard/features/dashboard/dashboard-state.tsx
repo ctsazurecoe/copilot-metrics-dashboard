@@ -40,6 +40,7 @@ class DashboardState {
   public filteredData: CopilotUsageOutput[] = [];
   public languages: DropdownFilterItem[] = [];
   public editors: DropdownFilterItem[] = [];
+  public models: DropdownFilterItem[] = [];
   public teams: DropdownFilterItem[] = [];
   public timeFrame: TimeFrame = "weekly";
   public hideWeekends: boolean = false;
@@ -81,6 +82,7 @@ class DashboardState {
     this.teamsData = teamsData;
     this.languages = this.extractUniqueLanguages();
     this.editors = this.extractUniqueEditors();
+    this.models = this.extractUniqueModels();
     this.teams = this.extractUniqueTeams();
     // Store current filter for data refreshing
     if (filter) {
@@ -98,6 +100,14 @@ class DashboardState {
 
   public filterEditor(editor: string): void {
     const item = this.editors.find((l) => l.value === editor);
+    if (item) {
+      item.isSelected = !item.isSelected;
+      this.applyFilters();
+    }
+  }
+
+  public filterModel(model: string): void {
+    const item = this.models.find((m) => m.value === model);
     if (item) {
       item.isSelected = !item.isSelected;
       this.applyFilters();
@@ -151,6 +161,7 @@ class DashboardState {
         this.apiData = [...metricsResult.data];
         this.languages = this.extractUniqueLanguages();
         this.editors = this.extractUniqueEditors();
+        this.models = this.extractUniqueModels();
 
         // Preserve team selections and reapply all filters
         const currentTeamSelections = this.teams.map((t) => ({
@@ -192,6 +203,7 @@ class DashboardState {
   public async resetAllFilters(): Promise<void> {
     this.languages.forEach((item) => (item.isSelected = false));
     this.editors.forEach((item) => (item.isSelected = false));
+    this.models.forEach((item) => (item.isSelected = false));
     this.teams.forEach((item) => (item.isSelected = false));
     this.hideWeekends = false;
     this.hasPendingTeamChanges = false; // Reset pending changes
@@ -216,6 +228,7 @@ class DashboardState {
 
     const selectedLanguages = this.languages.filter((item) => item.isSelected);
     const selectedEditors = this.editors.filter((item) => item.isSelected);
+    const selectedModels = this.models.filter((item) => item.isSelected);
 
     if (selectedLanguages.length !== 0) {
       data.forEach((item) => {
@@ -232,6 +245,15 @@ class DashboardState {
       data.forEach((item) => {
         const filtered = item.breakdown.filter((breakdown: Breakdown) =>
           selectedEditors.some((editor) => editor.value === breakdown.editor)
+        );
+        item.breakdown = filtered;
+      });
+    }
+
+    if (selectedModels.length !== 0) {
+      data.forEach((item) => {
+        const filtered = item.breakdown.filter((breakdown: Breakdown) =>
+          selectedModels.some((model) => model.value === breakdown.model)
         );
         item.breakdown = filtered;
       });
@@ -273,6 +295,23 @@ class DashboardState {
     });
 
     return editors.sort((a, b) => a.value.localeCompare(b.value));
+  }
+
+  private extractUniqueModels(): DropdownFilterItem[] {
+    const models: DropdownFilterItem[] = [];
+
+    this.apiData.forEach((item) => {
+      item.breakdown.forEach((breakdown) => {
+        if (!breakdown.model) return;
+        const index = models.findIndex((model) => model.value === breakdown.model);
+
+        if (index === -1) {
+          models.push({ value: breakdown.model, isSelected: false });
+        }
+      });
+    });
+
+    return models.sort((a, b) => a.value.localeCompare(b.value));
   }
 
   private extractUniqueTeams(): DropdownFilterItem[] {
