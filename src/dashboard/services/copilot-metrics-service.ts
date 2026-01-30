@@ -1,5 +1,5 @@
 import { formatResponseError, unknownResponseError } from "@/features/common/response-error";
-import { CopilotMetrics, CopilotUsageOutput } from "@/features/common/models";
+import { CopilotMetrics, CopilotUsageOutput, UsageMetricsReportResponse, UsageMetricsData } from "@/features/common/models";
 import { ServerActionResponse } from "@/features/common/server-action-response";
 import { SqlQuerySpec } from "@azure/cosmos";
 import { format } from "date-fns";
@@ -293,4 +293,312 @@ export const _getCopilotMetrics = (): Promise<CopilotUsageOutput[]> => {
   });
 
   return promise;
+};
+
+// ============================================
+// New Usage Metrics API Functions (Oct 2025+)
+// ============================================
+
+/**
+ * Fetch organization usage metrics for a specific day from the new Usage Metrics API.
+ * This API returns download links to report files.
+ */
+export const getOrgUsageMetricsForDay = async (
+  org: string,
+  day: string
+): Promise<ServerActionResponse<UsageMetricsReportResponse>> => {
+  const env = ensureGitHubEnvConfig();
+  if (env.status !== "OK") {
+    return env;
+  }
+
+  const { token, version } = env.response;
+  const url = `https://api.github.com/orgs/${org}/copilot/metrics/reports/organization-1-day?day=${day}`;
+
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": version,
+      },
+    });
+
+    if (!response.ok) {
+      return formatResponseError(org, response);
+    }
+
+    return { status: "OK", response: await response.json() };
+  } catch (e) {
+    return unknownResponseError(e);
+  }
+};
+
+/**
+ * Fetch the latest 28-day organization usage metrics from the new Usage Metrics API.
+ */
+export const getOrgUsageMetricsLatest28Day = async (
+  org: string
+): Promise<ServerActionResponse<UsageMetricsReportResponse>> => {
+  const env = ensureGitHubEnvConfig();
+  if (env.status !== "OK") {
+    return env;
+  }
+
+  const { token, version } = env.response;
+  const url = `https://api.github.com/orgs/${org}/copilot/metrics/reports/organization-28-day/latest`;
+
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": version,
+      },
+    });
+
+    if (!response.ok) {
+      return formatResponseError(org, response);
+    }
+
+    return { status: "OK", response: await response.json() };
+  } catch (e) {
+    return unknownResponseError(e);
+  }
+};
+
+/**
+ * Fetch enterprise usage metrics for a specific day from the new Usage Metrics API.
+ */
+export const getEnterpriseUsageMetricsForDay = async (
+  enterprise: string,
+  day: string
+): Promise<ServerActionResponse<UsageMetricsReportResponse>> => {
+  const env = ensureGitHubEnvConfig();
+  if (env.status !== "OK") {
+    return env;
+  }
+
+  const { token, version } = env.response;
+  const url = `https://api.github.com/enterprises/${enterprise}/copilot/metrics/reports/enterprise-1-day?day=${day}`;
+
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": version,
+      },
+    });
+
+    if (!response.ok) {
+      return formatResponseError(enterprise, response);
+    }
+
+    return { status: "OK", response: await response.json() };
+  } catch (e) {
+    return unknownResponseError(e);
+  }
+};
+
+/**
+ * Fetch the latest 28-day enterprise usage metrics from the new Usage Metrics API.
+ */
+export const getEnterpriseUsageMetricsLatest28Day = async (
+  enterprise: string
+): Promise<ServerActionResponse<UsageMetricsReportResponse>> => {
+  const env = ensureGitHubEnvConfig();
+  if (env.status !== "OK") {
+    return env;
+  }
+
+  const { token, version } = env.response;
+  const url = `https://api.github.com/enterprises/${enterprise}/copilot/metrics/reports/enterprise-28-day/latest`;
+
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": version,
+      },
+    });
+
+    if (!response.ok) {
+      return formatResponseError(enterprise, response);
+    }
+
+    return { status: "OK", response: await response.json() };
+  } catch (e) {
+    return unknownResponseError(e);
+  }
+};
+
+/**
+ * Download and parse usage metrics data from the provided download links.
+ * These are signed URLs that don't require authentication.
+ */
+export const downloadUsageMetricsReports = async <T = UsageMetricsData>(
+  downloadLinks: string[]
+): Promise<ServerActionResponse<T[]>> => {
+  try {
+    const allData: T[] = [];
+
+    for (const link of downloadLinks) {
+      // Signed URLs - no auth headers needed
+      const response = await fetch(link, { cache: "no-store" });
+
+      if (!response.ok) {
+        console.warn(`Failed to download report from ${link}: ${response.status}`);
+        continue;
+      }
+
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        allData.push(...data);
+      } else {
+        allData.push(data);
+      }
+    }
+
+    return { status: "OK", response: allData };
+  } catch (e) {
+    return unknownResponseError(e);
+  }
+};
+
+/**
+ * Get usage metrics from the new API with automatic download of report data.
+ * This is a convenience function that combines fetching the report links and downloading the data.
+ */
+export const getCopilotUsageMetricsFromApi = async (
+  filter: IFilter
+): Promise<ServerActionResponse<CopilotUsageOutput[]>> => {
+  const env = ensureGitHubEnvConfig();
+  if (env.status !== "OK") {
+    return env;
+  }
+
+  try {
+    let reportResponse: ServerActionResponse<UsageMetricsReportResponse>;
+
+    // Determine if we're fetching enterprise or organization metrics
+    if (filter.enterprise) {
+      reportResponse = await getEnterpriseUsageMetricsLatest28Day(filter.enterprise);
+    } else if (filter.organization) {
+      reportResponse = await getOrgUsageMetricsLatest28Day(filter.organization);
+    } else {
+      return { status: "ERROR", errors: [{ message: "No organization or enterprise specified" }] };
+    }
+
+    if (reportResponse.status !== "OK") {
+      return reportResponse;
+    }
+
+    // Download the actual metrics data from the report links
+    if (!reportResponse.response.download_links?.length) {
+      return { status: "OK", response: [] };
+    }
+
+    const downloadResult = await downloadUsageMetricsReports<CopilotMetrics>(
+      reportResponse.response.download_links
+    );
+
+    if (downloadResult.status !== "OK") {
+      return downloadResult;
+    }
+
+    // Apply time frame labels to match existing data format
+    const dataWithTimeFrame = applyTimeFrameLabel(downloadResult.response);
+
+    return { status: "OK", response: dataWithTimeFrame };
+  } catch (e) {
+    return unknownResponseError(e);
+  }
+};
+
+/**
+ * Get usage metrics from the Cosmos DB (usage_metrics_history container).
+ * This reads data that was ingested by the new CopilotUsageMetricsIngestion function.
+ */
+export const getCopilotUsageMetricsFromDatabase = async (
+  filter: IFilter
+): Promise<ServerActionResponse<CopilotUsageOutput[]>> => {
+  const client = cosmosClient();
+  const database = client.database("platform-engineering");
+  const container = database.container("usage_metrics_history");
+
+  let start = "";
+  let end = "";
+  const maxDays = 365 * 2; // maximum 2 years of data
+  const maximumDays = 31;
+
+  if (filter.startDate && filter.endDate) {
+    start = format(filter.startDate, "yyyy-MM-dd");
+    end = format(filter.endDate, "yyyy-MM-dd");
+  } else {
+    const todayDate = new Date();
+    const startDate = new Date(todayDate);
+    startDate.setDate(todayDate.getDate() - maximumDays);
+
+    start = format(startDate, "yyyy-MM-dd");
+    end = format(todayDate, "yyyy-MM-dd");
+  }
+
+  let querySpec: SqlQuerySpec = {
+    query: `SELECT * FROM c WHERE c.date >= @start AND c.date <= @end AND c.report_type = 'usage_metrics'`,
+    parameters: [
+      { name: "@start", value: start },
+      { name: "@end", value: end },
+    ],
+  };
+
+  if (filter.enterprise) {
+    querySpec.query += ` AND c.enterprise = @enterprise`;
+    querySpec.parameters?.push({
+      name: "@enterprise",
+      value: filter.enterprise,
+    });
+  }
+
+  if (filter.organization) {
+    querySpec.query += ` AND c.organization = @organization`;
+    querySpec.parameters?.push({
+      name: "@organization",
+      value: filter.organization,
+    });
+  }
+
+  if (filter.team && filter.team.length > 0) {
+    if (filter.team.length === 1) {
+      querySpec.query += ` AND c.team = @team`;
+      querySpec.parameters?.push({ name: "@team", value: filter.team[0] });
+    } else {
+      const teamConditions = filter.team
+        .map((_, index) => `c.team = @team${index}`)
+        .join(" OR ");
+      querySpec.query += ` AND (${teamConditions})`;
+      filter.team.forEach((team, index) => {
+        querySpec.parameters?.push({ name: `@team${index}`, value: team });
+      });
+    }
+  } else {
+    querySpec.query += ` AND c.team = null`;
+  }
+
+  const { resources } = await container.items
+    .query<CopilotMetrics>(querySpec, {
+      maxItemCount: maxDays,
+    })
+    .fetchAll();
+
+  const dataWithTimeFrame = applyTimeFrameLabel(resources);
+  return {
+    status: "OK",
+    response: dataWithTimeFrame,
+  };
 };

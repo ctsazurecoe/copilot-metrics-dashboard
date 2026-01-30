@@ -179,3 +179,51 @@ export interface CopilotUsage {
     copilot_dotcom_chat: CopilotDotcomChatMetrics;
     copilot_dotcom_pull_requests: CopilotDotcomPullRequestsMetrics;
   }
+
+// ============================================
+// Usage Metrics API Types (New API from Oct 2025)
+// ============================================
+
+/**
+ * Response from the GitHub Copilot Usage Metrics API.
+ * Contains download links to report files and date information.
+ */
+export interface UsageMetricsReportResponse {
+  download_links: string[];
+  report_day?: string;
+  report_start_day?: string;
+  report_end_day?: string;
+}
+
+/**
+ * Usage metrics data from the downloaded reports.
+ * This extends the existing CopilotMetrics with additional fields.
+ */
+export interface UsageMetricsData extends CopilotMetrics {
+  id: string;
+  enterprise?: string | null;
+  organization?: string | null;
+  team?: string | null;
+  report_type: 'usage_metrics' | 'user_usage_metrics';
+  last_update: string;
+}
+
+/**
+ * User-level usage metrics for detailed engagement analysis.
+ */
+export interface UserUsageMetricsData {
+  id: string;
+  date: string;
+  user_login?: string;
+  user_id?: number;
+  total_active_days: number;
+  total_engaged_days: number;
+  copilot_ide_code_completions?: CopilotIDEMetrics;
+  copilot_ide_chat?: CopilotIDEChatMetrics;
+  copilot_dotcom_chat?: CopilotDotcomChatMetrics;
+  copilot_dotcom_pull_requests?: CopilotDotcomPullRequestsMetrics;
+  enterprise?: string | null;
+  organization?: string | null;
+  report_type: 'user_usage_metrics';
+  last_update: string;
+}

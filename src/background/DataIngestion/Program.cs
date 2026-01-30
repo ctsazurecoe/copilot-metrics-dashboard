@@ -10,6 +10,7 @@ var host = new HostBuilder()
         services.Configure<GithubMetricsApiOptions>(ctx.Configuration.GetSection("GITHUB_METRICS"));
         services.AddHttpClient<GitHubCopilotMetricsClient>(ConfigureClient);
         services.AddHttpClient<GitHubCopilotSeatsClient>(ConfigureClient);
+        services.AddHttpClient<GitHubCopilotUsageMetricsClient>(ConfigureClient);
     })
     .Build();
 
