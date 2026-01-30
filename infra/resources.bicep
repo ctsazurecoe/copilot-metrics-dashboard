@@ -45,6 +45,7 @@ var databaseName = 'platform-engineering'
 var orgContainerName = 'history'
 var metricsContainerName = 'metrics_history'
 var seatsContainerName = 'seats_history'
+var usageMetricsContainerName = 'usage_metrics_history'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2020-06-01' = {
   name: appserviceName
@@ -327,6 +328,22 @@ resource seatsHistoryContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabas
   properties: {
     resource: {
       id: seatsContainerName
+      partitionKey: {
+        paths: [
+          '/date'
+        ]
+        kind: 'Hash'
+      }
+    }
+  }
+}
+
+resource usageMetricsHistoryContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-05-15' = {
+  name: usageMetricsContainerName
+  parent: database
+  properties: {
+    resource: {
+      id: usageMetricsContainerName
       partitionKey: {
         paths: [
           '/date'
